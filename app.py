@@ -1,11 +1,15 @@
-﻿"""
+"""
 app.py
 ------
-TMDB-Style Movie Recommendation Web Application
-Built with Streamlit + Hybrid Recommendation Engine (SVD-CF + Genre-CB)
+Legacy entrypoint that now delegates to the TMDB-only CineAI app.
 
 Run:  streamlit run app.py
 """
+
+from tmdb_app import main as _tmdb_main
+
+_tmdb_main()
+raise SystemExit
 
 import os
 import sys
@@ -758,11 +762,8 @@ def render_movie_card(movie_id: int, title: str, genres: str,
     st.markdown(card_html, unsafe_allow_html=True)
 
     trailer_url = _trailer_search_url(title)
-    st.link_button("▶ Trailer", trailer_url, use_container_width=True)
-    if st.button("ℹ More Info", key=f"{key}_info", help=title, use_container_width=True):
-        st.session_state.selected_movie_id = movie_id
-        st.session_state.page = "Movie Details"
-        st.rerun()
+    st.link_button("▶ Trailer", trailer_url, width="stretch")
+    # Removed explicit 'More Info' button: posters are clickable and will open details.
 
 
 def render_movie_grid(movies_df: pd.DataFrame, cols: int = 8, key_prefix: str = "card") -> None:
@@ -851,7 +852,7 @@ def render_posters_from_query(query: str) -> None:
         col = columns[i % cols]
         with col:
             if url:
-                st.image(url, caption=label, use_container_width=True)
+                st.image(url, caption=label, width="stretch")
             else:
                 st.markdown(
                     f'<div style="width:100%;padding:24px 12px;border-radius:8px;background:#1a1a1a;'
@@ -900,7 +901,7 @@ with st.sidebar:
                 unsafe_allow_html=True,
             )
         else:
-            if st.button(f"{_icon}  {_label}", key=f"nav_{_pkey}", use_container_width=True):
+            if st.button(f"{_icon}  {_label}", key=f"nav_{_pkey}", width="stretch"):
                 st.session_state.page = _pkey
                 st.rerun()
 
@@ -968,11 +969,11 @@ with st.sidebar:
     if poster_query != st.session_state.get("poster_query", ""):
         st.session_state.poster_query = poster_query
 
-    if st.button("Show Posters", use_container_width=True):
+    if st.button("Show Posters", width="stretch"):
         st.session_state.page = "Posters"
         st.rerun()
 
-    if st.button("Prefetch all posters (save to data/posters.csv)", use_container_width=True):
+    if st.button("Prefetch all posters (save to data/posters.csv)", width="stretch"):
         key = st.session_state.get("tmdb_api_key", "").strip()
         if not key:
             st.error("TMDB API Key required to prefetch posters. Paste it above and try again.")
@@ -1070,12 +1071,9 @@ if st.session_state.page == "Home":
     trailer_url = _trailer_search_url(featured_title)
     _hcol1, _hcol2, _hpad = st.columns([1.2, 1.6, 8])
     with _hcol1:
-        st.link_button("▶  Play", trailer_url, use_container_width=False)
+        st.link_button("▶  Play", trailer_url, width="content")
     with _hcol2:
-        if st.button("ℹ  More Info", key="hero_info"):
-            st.session_state.selected_movie_id = featured_mid
-            st.session_state.page = "Movie Details"
-            st.rerun()
+        st.empty()
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Top Picks ────────────────────────────────────────────────
@@ -1121,7 +1119,7 @@ elif st.session_state.page == "Search":
             label_visibility="collapsed",
         )
     with col_btn:
-        do_search = st.button("🔍 Search", use_container_width=True)
+        do_search = st.button("🔍 Search", width="stretch")
 
     if query:
         st.session_state.search_query = query
@@ -1300,7 +1298,7 @@ elif st.session_state.page == "Movie Details":
                 for spine in ax.spines.values():
                     spine.set_edgecolor("#333")
                 fig.tight_layout()
-                st.pyplot(fig, use_container_width=False)
+                st.pyplot(fig, width="content")
 
 
 # ============================================================
@@ -1337,7 +1335,7 @@ elif st.session_state.page == "My Recommendations":
             display_df = recs_df[["title", "genres", "avg_rating", "cf_score", "cb_score", "hybrid_score"]].copy()
             display_df.columns = ["Title", "Genres", "Avg Rating", "CF Score", "CB Score", "Hybrid Score"]
             display_df = display_df.round(4)
-            st.dataframe(display_df, use_container_width=True)
+            st.dataframe(display_df, width="stretch")
 
         st.markdown('<div class="nf-row-label">🎬 Your Top Picks</div>', unsafe_allow_html=True)
         render_movie_grid(recs_df, cols=10, key_prefix=f"myrec_{user_id}")
@@ -1348,7 +1346,7 @@ elif st.session_state.page == "My Recommendations":
         with st.spinner("Generating comparison chart …"):
             try:
                 fig = plot_hybrid_weight_comparison(rec, user_id, n=10)
-                st.pyplot(fig, use_container_width=True)
+                st.pyplot(fig, width="stretch")
             except Exception:
                 st.info("Not enough data to render the comparison chart for this user.")
 
@@ -1401,11 +1399,11 @@ elif st.session_state.page == "Analytics":
     with col_a:
         st.markdown("#### Rating Distribution")
         fig1 = plot_rating_distribution(data["ratings"])
-        st.pyplot(fig1, use_container_width=True)
+        st.pyplot(fig1, width="stretch")
     with col_b:
         st.markdown("#### Genre Distribution")
         fig2 = plot_genre_distribution(data["movies"])
-        st.pyplot(fig2, use_container_width=True)
+        st.pyplot(fig2, width="stretch")
 
     st.markdown("---")
 
@@ -1414,11 +1412,11 @@ elif st.session_state.page == "Analytics":
     with col_c:
         st.markdown("#### Most Rated Movies")
         fig3 = plot_top_movies(data["movie_stats"], n=15)
-        st.pyplot(fig3, use_container_width=True)
+        st.pyplot(fig3, width="stretch")
     with col_d:
         st.markdown("#### Highest Rated Movies")
         fig4 = plot_top_rated_movies(data["movie_stats"], min_ratings=3, n=15)
-        st.pyplot(fig4, use_container_width=True)
+        st.pyplot(fig4, width="stretch")
 
     st.markdown("---")
 
@@ -1427,11 +1425,11 @@ elif st.session_state.page == "Analytics":
     with col_e:
         st.markdown("#### Most Active Users")
         fig5 = plot_user_activity(data["ratings"], top_n=20)
-        st.pyplot(fig5, use_container_width=True)
+        st.pyplot(fig5, width="stretch")
     with col_f:
         st.markdown("#### Ratings Over Time")
         fig6 = plot_ratings_over_time(data["ratings"])
-        st.pyplot(fig6, use_container_width=True)
+        st.pyplot(fig6, width="stretch")
 
     st.markdown("---")
 
