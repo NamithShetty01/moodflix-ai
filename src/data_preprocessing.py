@@ -36,7 +36,8 @@ def download_movielens(data_dir: Path = DATA_DIR) -> bool:
 
         data_dir.mkdir(parents=True, exist_ok=True)
         print("Downloading MovieLens dataset …")
-        resp = requests.get(MOVIELENS_URL, stream=True, timeout=60)
+        # Keep startup responsive in offline or flaky-network environments.
+        resp = requests.get(MOVIELENS_URL, stream=True, timeout=10)
         resp.raise_for_status()
 
         with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
@@ -227,9 +228,12 @@ def load_data(data_dir: Path = DATA_DIR):
     if not movies_path.exists() or not ratings_path.exists():
         print("Data files not found — attempting download …")
         if not download_movielens(data_dir):
-            print("Download failed — generating sample data …")
-            create_sample_data(data_dir)
-        # Re-resolve paths in case download or sample generation created files.
+            raise FileNotFoundError(
+                "MovieLens data files are required. Put movies.csv and ratings.csv "
+                "in the data directory or enable network access so they can be downloaded."
+            )
+
+        # Re-resolve paths in case download created files.
         movies_path = _pick_latest_csv(data_dir, "movies")
         ratings_path = _pick_latest_csv(data_dir, "ratings")
         links_path = _pick_latest_csv(data_dir, "links")
